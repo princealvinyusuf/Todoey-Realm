@@ -11,5 +11,6 @@ import RealmSwift
 
 class Category: Object {
     @objc dynamic var name: String = ""
+    // Relationship "to many"
     let items = List<Item>()
 }

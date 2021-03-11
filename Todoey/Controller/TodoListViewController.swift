@@ -7,46 +7,48 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class TodoListViewController: UITableViewController {
     
-    var itemArray = [Item]()
+    var itemArray: Results<Item>?
+    let realm = try! Realm()
+    
     var selectedCategory : Category? {
         didSet {
-//             loadItems()
+            loadItems()
         }
     }
     
-//    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-//
-    //    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
-    //
-    
-   
     override func viewDidLoad() {
         super.viewDidLoad()
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-    
+        
     }
     
     // MARK: - Table View Datasource
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return itemArray?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let item = itemArray[indexPath.row]
         
         let cell = tableView.dequeueReusableCell(withIdentifier: K.cellIdentifier, for: indexPath)
-        cell.textLabel?.text = item.title
         
-        // Ternary Operator
-        // Result / Variable To Change : Compare Statement : Atribute (Value)
-        cell.accessoryType = item.done == true ? .checkmark : .none
+        if let item = itemArray?[indexPath.row] {
+            cell.textLabel?.text = item.title
+            
+            // Ternary Operator
+            // Result / Variable To Change : Compare Statement : Atribute (Value)
+            cell.accessoryType = item.done == true ? .checkmark : .none
+            
+        } else {
+            cell.textLabel?.text = "No Items Added Yet"
+        }
         
+        return cell
         
         //        if item.done == true {
         //            cell.accessoryType = .checkmark
@@ -54,7 +56,7 @@ class TodoListViewController: UITableViewController {
         //            cell.accessoryType = .none
         //        }
         
-        return cell
+        
         
     }
     
@@ -62,28 +64,24 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        //Delete Section
-        // The first one -> Delete from context before the changes save to core data
-        // The second one -> Delete from itemArray
-        //        context.delete(itemArray[indexPath.row])
-        //        itemArray.remove(at: indexPath.row)
+        if let item = itemArray?[indexPath.row] {
+            do {
+                try realm.write {
+                    item.done = !item.done
+                }
+            } catch {
+                print("Error in update data \(error.localizedDescription)")
+            }
+        }
         
-        
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
-//        saveItems()
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
-        
-        //        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-        //            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        //        } else {
-        //            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        //        }
-        
     }
     
     
     
     // MARK: - Add Button Pressed
+    // MARK: - Ceate A Data Into Realm Database
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
@@ -94,14 +92,20 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             // What will happen if user click on Add Item button on our Alert
             
-//            let newItem = Item(context: self.context)
-//            newItem.title = textField.text!
-//            newItem.done = false
-//            newItem.parentCategory = self.selectedCategory
-//            self.itemArray.append(newItem)
+            // Action to add data from textfield and save it into realm database
+            if let currentCategories = self.selectedCategory {
+                do {
+                    try self.realm.write {
+                        let newItems = Item()
+                        newItems.title = textField.text!
+                        currentCategories.items.append(newItems)
+                    }
+                } catch {
+                    print("Error saving data into realm database \(error.localizedDescription)")
+                }
+            }
             
-//            self.saveItems()
-            
+            self.tableView.reloadData()
         }
         
         alert.addTextField { (alertTextField) in
@@ -115,53 +119,15 @@ class TodoListViewController: UITableViewController {
         
     }
     
-    // MARK: - Create item to Core Data
     
-//    func saveItems() {
-//        do {
-//            try context.save()
-//        } catch {
-//            print("Error saving context \(error.localizedDescription)")
-//        }
-//        
-//        self.tableView.reloadData()
-//    }
+    // MARK: - Read Data from Realm Database
     
-    // MARK: - Read item from Core Data
-    
-//    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
-//        //        let request : NSFetchRequest<Item> = Item.fetchRequest()
-//
-//        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-//
-//        if let additionalPredicate = predicate {
-//            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
-//        } else {
-//            request.predicate = categoryPredicate
-//        }
-////        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categorPredicate, predicate])
-////        request.predicate = compoundPredicate
-//
-//
-//
-//        do {
-//            itemArray =  try context.fetch(request)
-//        } catch {
-//            print("Error from request \(error.localizedDescription)")
-//        }
-//
-//        tableView.reloadData()
-//
-//        //        if let data = try? Data(contentsOf: dataFilePath!) {
-//        //            let decoder = PropertyListDecoder()
-//        //            do {
-//        //                itemArray = try decoder.decode([Item].self, from: data)
-//        //            } catch {
-//        //                print(error.localizedDescription)
-//        //            }
-//        //
-//        //        }
-//    }
+    func loadItems() {
+        itemArray = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        
+        tableView.reloadData()
+        
+    }
     
 }
 
