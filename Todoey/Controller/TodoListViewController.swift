@@ -61,12 +61,13 @@ class TodoListViewController: UITableViewController {
     }
     
     //MARK: - Table View Delegate Method
-    
+    //MARK: - Updated / Deleted Data Into Realm Database
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         if let item = itemArray?[indexPath.row] {
             do {
                 try realm.write {
+                //  realm.delete(item) // Use this statement to delete item from realm database
                     item.done = !item.done
                 }
             } catch {
@@ -131,32 +132,23 @@ class TodoListViewController: UITableViewController {
     
 }
 
-//extension TodoListViewController: UISearchBarDelegate {
-//
-//    // MARK: - Search Bar Delegate
-//
-//    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-//        let request: NSFetchRequest<Item> = Item.fetchRequest()
-//
-//        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-////        request.predicate = predicate
-//
-//        let sortDescriptor = NSSortDescriptor(key: "title", ascending: true)
-//        request.sortDescriptors = [sortDescriptor]
-//
-//        loadItems(with: request, predicate: predicate)
-//
-//    }
-//
-//    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-//        if searchBar.text?.count == 0 {
-//            loadItems()
-//
-//            DispatchQueue.main.async {
-//                searchBar.resignFirstResponder()
-//            }
-//
-//        }
-//    }
-//}
-//
+extension TodoListViewController: UISearchBarDelegate {
+
+    // MARK: - Search Bar Delegate
+
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        itemArray = itemArray?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "title", ascending: true)
+    }
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+
+        }
+    }
+}
+
