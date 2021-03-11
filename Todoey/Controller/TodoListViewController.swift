@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
     
     var itemArray: Results<Item>?
     let realm = try! Realm()
@@ -25,6 +25,7 @@ class TodoListViewController: UITableViewController {
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
+        
     }
     
     // MARK: - Table View Datasource
@@ -35,13 +36,10 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: K.cellIdentifier, for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if let item = itemArray?[indexPath.row] {
             cell.textLabel?.text = item.title
-            
-            // Ternary Operator
-            // Result / Variable To Change : Compare Statement : Atribute (Value)
             cell.accessoryType = item.done == true ? .checkmark : .none
             
         } else {
@@ -50,13 +48,19 @@ class TodoListViewController: UITableViewController {
         
         return cell
         
-        //        if item.done == true {
-        //            cell.accessoryType = .checkmark
-        //        } else {
-        //            cell.accessoryType = .none
-        //        }
-        
-        
+    }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let items = itemArray?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(items)
+                }
+            } catch {
+                print("Error to update item \(error.localizedDescription)")
+            }
+            
+        }
         
     }
     
@@ -67,7 +71,7 @@ class TodoListViewController: UITableViewController {
         if let item = itemArray?[indexPath.row] {
             do {
                 try realm.write {
-                //  realm.delete(item) // Use this statement to delete item from realm database
+                    //  realm.delete(item) // Use this statement to delete item from realm database
                     item.done = !item.done
                 }
             } catch {
@@ -134,23 +138,23 @@ class TodoListViewController: UITableViewController {
 }
 
 extension TodoListViewController: UISearchBarDelegate {
-
+    
     // MARK: - Search Bar Delegate
-
+    
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         itemArray = itemArray?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "dateCreated", ascending: true)
         
         tableView.reloadData()
     }
-
+    
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
             loadItems()
-
+            
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()
             }
-
+            
         }
     }
 }
