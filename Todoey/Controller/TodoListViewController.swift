@@ -8,8 +8,11 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: SwipeTableViewController {
+    
+    @IBOutlet weak var searchBar: UISearchBar!
     
     var itemArray: Results<Item>?
     let realm = try! Realm()
@@ -25,7 +28,26 @@ class TodoListViewController: SwipeTableViewController {
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        
+        tableView.separatorStyle = .none
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        if let safeColor = selectedCategory?.color {
+            
+            title = selectedCategory!.name
+            
+            guard let navBar = navigationController?.navigationBar else { fatalError("Error navigation bar doesnt exist.")}
+            
+            if let navBarColor = UIColor(hexString: safeColor) {
+                navBar.barTintColor = navBarColor
+                navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+                navBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(navBarColor, returnFlat: true)]
+                
+                searchBar.barTintColor = navBarColor.darken(byPercentage: -0.8)
+            }
+            
+            
+        }
     }
     
     // MARK: - Table View Datasource
@@ -38,9 +60,20 @@ class TodoListViewController: SwipeTableViewController {
         
         let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
+        
         if let item = itemArray?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done == true ? .checkmark : .none
+            if let color = UIColor(hexString: selectedCategory!.color)?.darken(byPercentage:
+                                                                                // Currently on row 5
+                                                                                // Total of 10 itemArray
+                                                                                CGFloat(indexPath.row) / CGFloat(itemArray!.count)
+            ) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+                
+            }
+            
             
         } else {
             cell.textLabel?.text = "No Items Added Yet"
